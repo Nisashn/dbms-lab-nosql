@@ -1,0 +1,53 @@
+services:
+  hazelcast:
+    image: hazelcast/hazelcast:3.12
+    container_name: nosql-hazelcast
+    ports:
+      - "5701:5701"
+    environment:
+      JAVA_OPTS: "-Dhazelcast.local.publicAddress=127.0.0.1:5701"
+    volumes:
+      - hazelcast-data:/data
+  redis:
+    image: redis:7-alpine
+    container_name: nosql-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+  mongodb:
+    image: mongo:7
+    container_name: nosql-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: nosqllab
+    volumes:
+      - mongodb-data:/data/db
+app:
+    build: .
+    container_name: nosql-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      hazelcast:
+        condition: service_healthy
+    networks:
+      - nosql-network
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - HAZELCAST_HOST=hazelcast
+      - HAZELCAST_PORT=5701
+
+volumes:
+  redis-data:
+  mongodb-data:
+  hazelcast-data:
